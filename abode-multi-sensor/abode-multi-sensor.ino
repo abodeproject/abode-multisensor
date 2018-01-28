@@ -28,7 +28,8 @@ String mqttTopic;
 int mqtt_connected = 0;
 int mqttAttemptInterval = 10000;
 int lastMqttAttempt = 0;
-
+int heartbeatInterval = 30000;
+int lastHeartbeat = 0;
 
 /* Config Vars */
 struct Config{
@@ -51,7 +52,7 @@ Config cfg;
 
 /* DHT Vars */
 #define DHTPIN D7
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
 int DHTPollInterval = 10000;
 int lastDHTPoll = 0;
@@ -121,6 +122,16 @@ void loop() {
   pollPIR();
   pollLDR();
 
+  if (millis() < lastHeartbeat) {
+    lastHeartbeat = millis();
+  }
+  
+  if (millis() - lastHeartbeat > heartbeatInterval) {
+    Serial.println("Sending heartbeat.");
+    mqttPublish();
+    lastHeartbeat = millis();
+  }
+  
   delay(1000);
 }
 
@@ -209,7 +220,7 @@ void mqtt_setup() {
       }
       
       Serial.print(".");
-      if (mqtt.connect("sensor")) {
+      if (mqtt.connect(cfg.name)) {
         mqtt.subscribe(cfg.mqtt_topic);
         break;
       }
@@ -243,6 +254,7 @@ void mqttPublish() {
   String document = "{";
   document = "" + document + ""
   "\"name\": \"" + cfg.name + "\", "
+  "\"ip\": \"" + WiFi.localIP().toString() + "\", "
   "\"time\": " + millis() + ", "
   "\"temperature\": " + tempValue + ", "
   "\"humidity\": " + humValue + ", "
@@ -256,7 +268,8 @@ void mqttPublish() {
   Serial.println(buffer);
   Serial.print("Publishing to MQTT topic: ");
   Serial.print(cfg.mqtt_topic);
-  mqtt.publish(cfg.mqtt_topic, buffer, true);
+  boolean result = mqtt.publish(cfg.mqtt_topic, buffer, true);
+  Serial.print(result ? " success" : " failed");
   Serial.print(" (");
   Serial.print(mqtt.state());
   Serial.println(")");
@@ -337,7 +350,7 @@ void pollDHT() {
       mqttPublish();
 
       tempLast = tempValue;
-      humLast = tempValue;
+      humLast = humValue;
       
       Serial.print("Polled DHT: t:");
       Serial.print(tempValue);
@@ -711,7 +724,8 @@ void handleStatus() {
   "\"motion\": " + pirValue + ", "
   "\"lux\": " + ldrValue + ", "
   "\"time\": " + millis() + ", "
-  "\"name\": \"" + cfg.name + "\""
+  "\"name\": \"" + cfg.name + "\", "
+  "\"ip\": \"" + WiFi.localIP().toString() + "\""
   "}";
   
   server.send(200, "application/json", document);
