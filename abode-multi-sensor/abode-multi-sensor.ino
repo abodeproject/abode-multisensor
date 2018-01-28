@@ -273,6 +273,10 @@ void mqttPublish() {
   Serial.print(" (");
   Serial.print(mqtt.state());
   Serial.println(")");
+
+  if (!result) {
+    mqtt.disconnect();
+  }
 }
 
 void mqttHandler (char* topic, byte* payload, unsigned int length) {
