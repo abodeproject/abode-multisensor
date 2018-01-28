@@ -1,3 +1,6 @@
+
+#define MQTT_MAX_PACKET_SIZE 512
+
 #include <ESP8266WiFi.h>
 #include <WiFiClient.h> 
 #include <ArduinoOTA.h>
@@ -48,7 +51,7 @@ Config cfg;
 
 /* DHT Vars */
 #define DHTPIN D7
-#define DHTTYPE DHT22
+#define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 int DHTPollInterval = 10000;
 int lastDHTPoll = 0;
@@ -239,20 +242,24 @@ void mqttPublish() {
 
   String document = "{";
   document = "" + document + ""
+  "\"name\": \"" + cfg.name + "\", "
+  "\"time\": " + millis() + ", "
   "\"temperature\": " + tempValue + ", "
   "\"humidity\": " + humValue + ", "
   "\"motion\": " + pirValue + ", "
-  "\"lux\": " + ldrValue + ", "
-  "\"time\": " + millis() + ""
+  "\"lux\": " + ldrValue + ""
   "}";
 
-  char buffer[128];
+  char buffer[512];
 
-  document.toCharArray(buffer, 128);
-  Serial.println(document);
+  document.toCharArray(buffer, 512);
+  Serial.println(buffer);
   Serial.print("Publishing to MQTT topic: ");
-  Serial.println(cfg.mqtt_topic);
+  Serial.print(cfg.mqtt_topic);
   mqtt.publish(cfg.mqtt_topic, buffer, true);
+  Serial.print(" (");
+  Serial.print(mqtt.state());
+  Serial.println(")");
 }
 
 void mqttHandler (char* topic, byte* payload, unsigned int length) {
@@ -702,7 +709,9 @@ void handleStatus() {
   "\"temperature\": " + tempValue + ", "
   "\"humidity\": " + humValue + ", "
   "\"motion\": " + pirValue + ", "
-  "\"lux\": " + ldrValue + ""
+  "\"lux\": " + ldrValue + ", "
+  "\"time\": " + millis() + ", "
+  "\"name\": \"" + cfg.name + "\""
   "}";
   
   server.send(200, "application/json", document);
