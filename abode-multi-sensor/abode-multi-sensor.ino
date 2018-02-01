@@ -535,7 +535,13 @@ const String styles = "<style>"
 
 void handleRoot() {
   String document = ""
-  "<html>" + styles + ""
+  "<html>"
+  "<head>"
+    "<title>Multi-Sensor</title>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+  "" + styles + ""
+  "</head>"
   "<body>"
   "<div id='content'>"
   "<ul id='nav'>"
@@ -570,7 +576,13 @@ void handleSettings() {
   Serial.println("Client connected");
 
   String document = ""
-  "<html>" + styles + ""
+  "<html>"
+  "<head>"
+    "<title>Multi-Sensor</title>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+  "" + styles + ""
+  "</head>"
   "<script language='JavaScript'>\n"
   "function getNetworks() {\n"
     "document.getElementById('i').innerHTML='Loading Networks...';\n"
@@ -639,7 +651,13 @@ void handleSettings() {
 
 void returnFail(String msg) {
   String document = ""
-  "<html>" + styles + ""
+  "<html>"
+  "<head>"
+    "<title>Multi-Sensor</title>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+  "" + styles + ""
+  "</head>"
   "<body>"
   "<div id='content'>"
   "<ul id='nav'>"
@@ -741,9 +759,15 @@ void handleSave() {
   delay(1000);
   
   String document = ""
-  "<html>" + styles + ""
+  "<html>"
+  "<head>"
+    "<title>Multi-Sensor</title>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+  "" + styles + ""
+  "</head>"
   "<body>"
-  "<div>Applying configuration. Device will reboot and attempt to connect to wifi.</div>"
+  "<div id='content'>Applying configuration. Device will reboot and attempt to connect to wifi.</div>"
   "</body>"
   "</html>";
   
@@ -756,7 +780,13 @@ void handleSave() {
 
 void handleRestart() {
   String document = ""
-  "<html>" + styles + ""
+  "<html>"
+  "<head>"
+    "<title>Multi-Sensor</title>"
+    "<meta charset='utf-8'>"
+    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+  "" + styles + ""
+  "</head>"
   "<body>"
   "<div id='content'>Restarting</div>"
   "</body>"
