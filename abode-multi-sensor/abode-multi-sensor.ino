@@ -5,6 +5,7 @@
 #include <WiFiClient.h> 
 #include <ArduinoOTA.h>
 #include <ESP8266WebServer.h>
+#include <DNSServer.h>
 #include <PubSubClient.h>
 #include <EEPROM.h>
 #include <DHT.h>
@@ -17,6 +18,12 @@ const int max_tries = 30;
 int connected = 0;
 char ssid[12];
 byte mac[6];
+IPAddress apIP(192, 168, 4, 1);
+IPAddress netMsk(255, 255, 255, 0);
+
+/* DNS Vars */
+const byte DNS_PORT = 53;
+DNSServer dnsServer;
 
 /* OTA Vars */
 const int OTAport = 8266;
@@ -98,12 +105,14 @@ void setup() {
   server.on("/restart", handleRestart);
   server.on("/wifi.json", handleNetworks);
   server.on("/status.json", handleStatus);
+  server.onNotFound(handleNotFound);
   server.begin();
   Serial.println("HTTP server started.");
 }
 
 void loop() {
   server.handleClient();
+  dnsServer.processNextRequest();
   ArduinoOTA.handle();
 
   if (!mqtt.connected()) {
@@ -126,12 +135,12 @@ void loop() {
     lastHeartbeat = millis();
   }
   
-  if (millis() - lastHeartbeat > heartbeatInterval) {
+  if (millis() - lastHeartbeat > heartbeatInterval && connected == 1) {
     Serial.println("Sending heartbeat.");
     mqttPublish();
     lastHeartbeat = millis();
   }
-  
+
   delay(1000);
 }
 
@@ -310,14 +319,17 @@ void wifi_setup() {
   if (WiFi.status() != WL_CONNECTED) {
     WiFi.mode(WIFI_AP);
     WiFi.macAddress(mac);
-    String ssid_str = "abode_" + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
+    String ssid_str = "sensor_" + String(mac[3], HEX) + String(mac[4], HEX) + String(mac[5], HEX);
     ssid_str.toCharArray(ssid, 12);
     Serial.println("Configuring access point..." + ssid_str);
+    WiFi.softAPConfig(apIP, apIP, netMsk);
     WiFi.softAP(ssid, password);
     
     IPAddress myIP = WiFi.softAPIP();
     Serial.print("AP IP address: ");
     Serial.println(myIP);
+
+    dnsServer.start(DNS_PORT, "*", myIP);
   } else {
     connected = 1;
     Serial.println("connected");
@@ -412,6 +424,43 @@ void pollLDR() {
   if (millis() < lastLDRPoll) {
     lastLDRPoll = millis();
   }
+}
+
+boolean isIp(String str) {
+  for (int i = 0; i < str.length(); i++) {
+    int c = str.charAt(i);
+    if (c != '.' && (c < '0' || c > '9')) {
+      return false;
+    }
+  }
+  return true;
+}
+
+String toStringIp(IPAddress ip) {
+  String res = "";
+  for (int i = 0; i < 3; i++) {
+    res += String((ip >> (8 * i)) & 0xFF) + ".";
+  }
+  res += String(((ip >> 8 * 3)) & 0xFF);
+  return res;
+}
+boolean captivePortal() {
+   if (!isIp(server.hostHeader())) {
+    Serial.print("Request redirected to captive portal");
+    server.sendHeader("Location", String("http://") + toStringIp(server.client().localIP()), true);
+    server.send ( 302, "text/plain", ""); 
+    server.client().stop();
+    return true;
+   }
+
+   return false;
+}
+void handleNotFound() {
+  if (captivePortal()) { // If caprive portal redirect instead of displaying the error page.
+    return;
+  }
+
+  server.send ( 404, "text/plain", "Not found" );
 }
 
 const String styles = "<style>"
